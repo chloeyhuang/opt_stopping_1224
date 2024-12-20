@@ -1,3 +1,9 @@
+# mine
+/figures/all_pos
+/train
+/train_4h 
+/papers
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
