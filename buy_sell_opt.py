@@ -31,14 +31,15 @@ def score_plot(id, weight = 2000):
     ax1.plot(long, c='b')
     ax1.axhline(-4.5, c = 'black')
 
-def buy_thres(id, thres = -4.5, interval = 20, N = 600, v = False):
+def buy_thres(id, thres = -3, interval = 20, N = 600, v = False, p = False):
     ret = get_returns(td[id])
     score = fast_mmtm(id, weight = 2000) / (10**4 * np.std(ret))**2
     buy_pos = score[score <= thres]
     trade_data = to_df(td[id])
 
     if len(buy_pos) == 0:
-        return 'no times in pos that are below threshold. no trades performed'
+        print('no times in pos that are below threshold. no trades performed')
+        return -np.ones(5)
     
     stopping_time = get_opt_stopping_time_batched(id, buy_pos.index[0], N, 50, 2, 10, v = v, interval=interval, batches=[10, 2])
 
@@ -48,25 +49,32 @@ def buy_thres(id, thres = -4.5, interval = 20, N = 600, v = False):
     sell = np.zeros((len(buy_pos), 2))
 
     for i in range(len(buy_pos)):
-        buy[i, :] = [fulfill_order(trade_data, buy_pos.index[i], int(1000 * abs(buy_pos[i])), -1), int(1000 * abs(buy_pos[i]))]
-        sell[i, :] = [fulfill_order(trade_data, buy_pos.index[i] + timedelta(seconds=0.1 * interval * int(stopping_time)), int(1000 * abs(buy_pos[i])), 1), int(1000 * abs(buy_pos[i]))]
+        buy[i, :] = [fulfill_order(trade_data, buy_pos.index[i], int(100 * abs(buy_pos[i])), -1), int(100 * abs(buy_pos[i]))]
+        sell[i, :] = [fulfill_order(trade_data, buy_pos.index[i] + timedelta(seconds=0.1 * interval * int(stopping_time)), int(100 * abs(buy_pos[i])), 1), int(100 * abs(buy_pos[i]))]
 
     df_buy = pd.DataFrame(data = buy, index = buy_pos.index, columns = ['change', 'vol'])
     df_sell = pd.DataFrame(data = sell, index = sell_pos_ind, columns = ['change', 'vol'])
-    if v == True:
-        print(stopping_time)
-        print(np.sum(sell[:, 0]) + np.sum(buy[:, 0]) )
+    if p == True:
         plt.plot(trade_data['bid_p1'])
         plt.plot(df_buy.index, np.mean(trade_data['bid_p1']) * np.ones(len(buy_pos)), marker = '^', c = 'r',alpha = 0.2)
         plt.plot(df_sell.index, np.mean(trade_data['bid_p1']) * np.ones(len(buy_pos)), marker = 'v', c = 'g', alpha = 0.2)
+    
+    if v == True:
+        print(stopping_time)
+        print(np.sum(sell[:, 0]) + np.sum(buy[:, 0]) )
         return pd.concat((df_buy, df_sell))
     else:
-        return np.array([np.sum(buy[:, 0]), np.sum(sell[:, 0]), np.sum(sell[:, 0]) + np.sum(buy[:, 0]), np.sum(buy[:, 1])])
+        return np.array([np.sum(buy[:, 0]), np.sum(sell[:, 0]), np.sum(sell[:, 0]) + np.sum(buy[:, 0]), np.sum(buy[:, 1]), stopping_time])
 
 def get_res(i):
-        print(i)
-        return buy_thres(i, v = False)
-    
-if __name__ == '__main__':
-    with Pool() as p:
-        res = p.map(get_res, np.arange(10))
+    print(i)
+    return buy_thres(i, v = False)
+   
+def get_all_res():
+    result = np.load('files/opt_stopping.npy')
+    ids = tqdm(range(np.argmin(result[:, 1] != 0), 523))
+    for id in ids:
+        result[id, :] = np.array(buy_thres(id))
+        np.save('files/opt_stopping.npy', result)
+
+get_all_res()

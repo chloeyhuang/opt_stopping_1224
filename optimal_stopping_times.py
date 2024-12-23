@@ -118,7 +118,7 @@ def get_opt_stopping_time_batched(id, time, N, M, depth, k, interval = 1, emp=Tr
         stop_times = np.zeros(batches[1])
 
         for i in range(batches[1]):
-            l_opt, loss = adam_opt(ps, pf, k, epochs = 1500, v = v)
+            l_opt, loss = adam_opt(ps, pf, k, epochs = 1500)
 
             #   performs inner product and squares it 
             in_prod = ps @ l_opt
