@@ -76,5 +76,3 @@ def get_all_res():
     for id in ids:
         result[id, :] = np.array(buy_thres(id))
         np.save('files/opt_stopping.npy', result)
-
-get_all_res()

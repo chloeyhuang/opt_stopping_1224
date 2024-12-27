@@ -65,12 +65,12 @@ def objective_real_data(trial):
     for i in range(20):
         mins[i] = adam_opt_all(ps, pf, 30, b1 = b1, b2 = b2, weight_decay= weight_decay)[1]
     return np.mean(mins) / (np.std(mins) + 10**(-8))
-
+"""
 study_r = optuna.create_study()
 study_r.optimize(objective_real_data, n_trials=60)
 
 print(study_r.best_params)
-
+"""
 def objective_mult(trial):
     lr = trial.suggest_float('lr', 0.0001, 0.3)
     sc = trial.suggest_float('sc', 10**(-4), 0.1)

@@ -105,7 +105,7 @@ def score(id, log = False, plot = False, show_all = False):
         df = pd.DataFrame(data = np.array([wghted_score, mean_vol, volatility, short_mom, long_mom, unwghted_short_mom, unwghted_long_mom]).reshape(1, 7), columns = ['{0}score'.format("log " if log == True else ""), 'mean volume', '{0}volatility'.format("log " if log == True else ""), 'short mom', 'long mom', 'short unweighted mom', 'long unweighted mom'], index = [td[id][5:-16]])
         
         return df
-def fast_mmtm(id, weight = 200):
+def fast_mmtm(id, weight = 200, start = False):
     trade_data = to_df(td[id])
     pos_data = to_df(pos[id])
 
@@ -124,22 +124,12 @@ def fast_mmtm(id, weight = 200):
          #   returns momentum as sum of gradient * volume at time t * weighting
         #   where weighting exponentially decays; small weight = closer values weighted more
         return 10000 * np.sum(gradient * np.exp(-10 * np.abs(np.trim_zeros(tdiff)/weight)))/norm_const
-    
-    return pd.Series(data = [score(t) for t in pos_data.index], index = pos_data.index)
+    if start == True:
+        return score(pos_data.index[0])
+    else:
+        return pd.Series(data = [score(t) for t in pos_data.index],     index = pos_data.index)
 
 all_scores = pd.read_csv('files/scored_cases.csv')
-
-
-#   analysis / diagnostics
-def plot_score_vol_cor():
-    res = sp.stats.linregress(all_scores['score'], all_scores['mean volume'])
-    x = np.linspace(-400,100)
-    fig, ax = plt.subplots()
-    ax.scatter(all_scores['score'], all_scores['mean volume'], s= 2, label = 'score vs mean volume')
-    ax.plot(x, res.intercept - 30000 + res.slope*x, 'g', label = '(intercept adjusted) linear regression on score vs mean volume')
-    ax.set(xlim = [-400, 100], ylim = [0, 200000], xlabel = 'score', ylabel = 'mean volume')
-    ax.legend(loc = 'lower left')
-
 corr = np.corrcoef(all_scores['score'], all_scores['mean volume'])
 #   correlation between them is approx -0.4, pretty sufficiently negatively correlated between score and mean vol
 
@@ -166,24 +156,6 @@ def pnl_by_thres(upper = -200.0, scoring = 'vol'):
     print(winrate, pnl)
     return df_res.dropna()
 
-def vol_ratio(id):
-    data = get_returns(td[id])
-    start = pos_drop_zero(to_df(pos[id])).index[0]
-
-    vol_before = np.std(data[:start])
-    vol_after = np.std(data[start:])
-
-    return vol_after/vol_before
-
-def est_vol(id, n):
-    data = get_returns(td[id])
-    start = pos_drop_zero(to_df(pos[id])).index[0]
-
-    vol_after = np.std(data[start:])
-    vol_est = np.std(data[start:][:n])
-
-    return vol_est/vol_after - 1
-
 def plot_price_rolling_c(id, n):
     data = dev_from_rolling_price(td[id], n)
 
@@ -200,11 +172,6 @@ def plot_price_rolling_c(id, n):
     ax1.set(xmargin=0, title = 'gradient')
     ax.legend()
     ax1.legend()
-
-def pre_vol(id, start = True):
-    data = get_returns(td[id])
-    start = to_df(pos[id]).index[0] if start == True else to_df(pos[id]).index[-1] 
-    return np.std(data[:start])
 
 def plot_price_rolling_diff(id):
     data = dev_from_rolling_price(td[id])
@@ -226,3 +193,21 @@ def plot_price_rolling_diff(id):
     ax.axhline(0, c = 'black')
     #ax.plot(data.dropna().index[250:-249], scale * means,)
     #ax.plot(data.dropna().index[250:-249], price_diffs[250:-249] - scale*means)
+
+def vol_ratio_linreg(pre_vol, short_mom):
+    x = 1/(1000 * pre_vol)
+    y = -short_mom/10
+    a = 0.128
+    p = 1.174
+    c = -0.106
+    eq = (np.abs(a * x + (1-a) * y)**(p) + c * x)/100
+
+    return 0.7604 + 20.534 * eq
+
+def est_vol_ratio(id):
+    data = get_returns(td[id])
+    start = to_df(pos[id]).index[0] 
+    pre_vol = np.std(data[:start][-6000:])
+    short_mom = fast_mmtm(id, start = True)
+
+    return vol_ratio_linreg(pre_vol, short_mom)

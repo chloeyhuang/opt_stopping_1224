@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import math
 import numpy as np 
 import matplotlib as mpl
@@ -112,7 +115,7 @@ def fulfill_order(td:pd.DataFrame, t:pd.Timestamp, vol:int, op:int, add_info = F
         counter += 1 
     
     if vol_left > 0:
-        raise Exception('Error: order size too large; could not be executed. Extra amount is ' + str(vol_left) + '; t = ' + str(ex_time))
+        raise Exception('Error: order size too large; could not be executed. Extra amount is ' + str(vol_left) + '; t = ' + str(t))
     else:
         if add_info == False:
             return op * np.dot(bins, prices)
@@ -201,7 +204,7 @@ def get_returns(td_fname, start= 0):
     tp = scaled_bid.index[:ln]
 
     returns = np.zeros(len(scaled_bid))
-    returns[0] = scaled_bid[0]-1
+    returns[0] = scaled_bid.iloc[0]-1
     returns[1:] = np.array(scaled_bid[1:])/np.array(scaled_bid[:-1]) - 1
 
     return pd.Series(data=returns, index = tp)

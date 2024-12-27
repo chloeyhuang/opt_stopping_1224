@@ -14,6 +14,7 @@ vol_index_regressed = lm_vol.intercept + lm_vol.slope * vol_index
 
 vol_index_r_adjusted =(1-scaling(buy_vol_ratio)) * vol_index_regressed + scaling(buy_vol_ratio) * buy_vol_ratio
 """
+
 def OU_process(dt, X0, N, theta, mu, sigma):
     X = np.zeros(N)
     X[0] = X0
@@ -164,18 +165,17 @@ def OU_est(id, log = True, bs_num = 0, r_corrected = True, interval = 1):
     ax.set(xmargin = 0)
     ax.legend()
 
-def gen_OU_sample(id, time, log = True, N = 6000, M = 1, emp = True, interval = 1, v = True):
+def gen_OU_sample(id, time, log = True, N = 6000, M = 1, emp = True, interval = 1):
     data = get_rolling(id, log = log, interval=interval)['diff'].dropna()
     pos_data = to_df(pos[id])
     #start = pos_data.index[int((len(pos_data.index)/2))]
     train = data[:time]
     dt = 0.1 * interval
 
-    vol_ratio = mle_an['r_sigma'][id]
-    pred_vol_ratio = vol_metrics['r_sigma pred.'][id]
-    
-    if v== True:
-        print('vol ratio: ', np.round(vol_ratio, decimals=4), ' | ', 'pred vol ratio: ', np.round(pred_vol_ratio, decimals=4))
+    #vol_ratio = mle_an['r_sigma'][id]
+    pred_vol_ratio = est_vol_ratio(id)
+    #if v== True:
+        #print('vol ratio: ', np.round(vol_ratio, decimals=4), ' | ', 'pred vol ratio: ', np.round(pred_vol_ratio, decimals=4))
     
     cdf_ran, cdf, theta, sigma = gen_cdf(train.values, dt, bs_num=0)
     paths = np.zeros((M, N))
