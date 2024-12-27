@@ -25,7 +25,7 @@ def aug_sig(id, end_time = 'pos', log = True, depth = 3, price = False, structur
     return signature
 
 def gen_partial_sigs(id, time, N, M, depth, interval = 1, emp = True, v = False, b_cor = 1):
-    paths, time_index = gen_OU_sample(id, time, N = N, M = M, emp = emp, v= v, interval = interval)
+    paths, time_index = gen_OU_sample(id, time, N = N, M = M, emp = emp, interval = interval)
 
     #estimated the 1/n(Y_i+n - Y_i) term by b_cor * 1.5 * (X_i+n - E(X))
     payoffs = paths[:, 1:] - paths[:, :-1] + b_cor * 1.5/500 * (paths[:, :-1] - np.mean(paths[:, :-1], axis=1, keepdims = True))
