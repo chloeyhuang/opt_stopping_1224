@@ -3,7 +3,7 @@
 /train
 /train_4h 
 /papers
-
+/utils/settings.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

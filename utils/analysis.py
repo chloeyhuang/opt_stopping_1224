@@ -1,4 +1,4 @@
-from util_funcs import * 
+from utils.util_funcs import * 
 
 def momentum(id, time = 0, weight = 200, fixed_vol = False):
     trade_data = to_df(td[id])

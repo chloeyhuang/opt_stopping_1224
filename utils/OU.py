@@ -1,11 +1,11 @@
-from analysis import *
+from utils.analysis import *
 
 #   stuff for vol modelling
 scaling = lambda x: np.abs(np.tanh((x-1)))
-vol_metrics = pd.read_csv('files/vol_metrics.csv')
+vol_metrics = pd.read_csv(header + 'files/vol_metrics.csv')
 
-mle_all = pd.read_csv('files/mle_OU_ests.csv')
-mle_an = pd.read_csv('files/mle_OU_stats.csv')
+mle_all = pd.read_csv(header + 'files/mle_OU_ests.csv')
+mle_an = pd.read_csv(header + 'files/mle_OU_stats.csv')
 
 """
 #   this is just how the metrics were produced; I get this is technically using future data but assuming this is the training set I can then try on more data

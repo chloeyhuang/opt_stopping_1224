@@ -1,8 +1,8 @@
 import iisignature as iis
 
-from analysis import * 
-from OU import gen_OU_sample
-from pytorch_opt import adam_opt
+from utils.analysis import * 
+from utils.OU import gen_OU_sample
+from utils.pytorch_opt import adam_opt
 
 def aug_sig(id, end_time = 'pos', log = True, depth = 3, price = False, structure = 1, interval = 1):
     data = get_rolling(id, log = log, interval = interval).dropna()

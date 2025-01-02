@@ -18,6 +18,10 @@ from statsmodels.graphics.tsaplots import plot_acf, acf
 import os
 from tqdm import tqdm
 
+import utils.settings as settings
+header = settings.header
+train_header = settings.train_header
+
 #   formatting for matplotlib graphs & pandas tables
 plt.rcParams['text.usetex'] = True
 plt.rcParams['figure.dpi'] = 200
@@ -29,15 +33,11 @@ plt.rcParams["figure.figsize"] = (12, 4)
 plt.rcParams["legend.loc"] = 'lower right'
 pd.options.display.float_format = '{:,.5f}'.format
 
-files = np.array(os.listdir('train'))
-files_long = np.array(os.listdir('train_4h'))
+files = np.array(os.listdir(train_header + 'train'))
+files_long = np.array(os.listdir(train_header + 'train_4h'))
 
 pos = files[np.nonzero(np.char.endswith(files, 'pos.csv'))]
 td = files[np.nonzero(np.char.endswith(files, 'trade.csv'))]
-
-pos_l = files_long[np.nonzero(np.char.endswith(files_long, 'pos.csv'))]
-td_l = files_long[np.nonzero(np.char.endswith(files_long, 'trade.csv'))]
-
 #   gets the case number
 getname = lambda x: int(x[7:-8]) if x[0] == "l" else int(x[5:-8])
 
@@ -46,8 +46,11 @@ getnametd = lambda x: int(x[7:-16]) if x[0] == "l" else int(x[5:-16])
 pos = sorted(pos, key = getname)
 td = sorted(td, key = getnametd)
 
-pos_l = sorted(pos_l, key = getname)
-td_l = sorted(td_l, key = getnametd)
+#pos_l = files_long[np.nonzero(np.char.endswith(files_long, 'pos.csv'))]
+#td_l = files_long[np.nonzero(np.char.endswith(files_long, 'trade.csv'))]
+
+#pos_l = sorted(pos_l, key = getname)
+#td_l = sorted(td_l, key = getnametd)
 
 #   a bunch of util functions and variable definitions to help visualise data 
 bid_prices = np.char.add("bid_p", (1 + np.arange(10)).astype(str))
@@ -56,16 +59,13 @@ bid_vols = np.char.add("bid_v", (1 + np.arange(10)).astype(str))
 ask_prices = np.char.add("ask_p", (1 + np.arange(10)).astype(str))
 ask_vols =  np.char.add("ask_v", (1 + np.arange(10)).astype(str))
 
-#   time diff in seconds (baseline is 10 minutes) - need to change this so that I dont rely on a global variable and instead can do variable sell time
-tdiff = 600
-
 #   converts all the csvs into dataframes
 def pos_drop_zero(pos:pd.DataFrame):
     no_na = pos.dropna()
     return no_na[no_na['mid_p'] != 0]
 
 def to_df(filename:str): 
-    folder = 'train_4h/' if filename[0] == 'l' else 'train/'
+    folder = train_header + 'train_4h/' if filename[0] == 'l' else train_header + 'train/'
     df = pd.read_csv(folder + filename, parse_dates = ["timestamp"], index_col = 0, date_format = 'mixed')
     if filename[-7:-4] == 'pos':
         return pos_drop_zero(df)
@@ -73,7 +73,7 @@ def to_df(filename:str):
         return df
 
 def to_df_no_ts(filename:str): 
-    folder = 'train_4h/' if filename[0] == 'l' else 'train/'
+    folder = train_header + 'train_4h/' if filename[0] == 'l' else train_header + 'train/'
     return pd.read_csv(folder + filename, parse_dates = ["timestamp"], date_format = 'mixed')
 
 #   matches the times where trading occurs with the times specified in pos data; just for easy access (potentially not useful? )

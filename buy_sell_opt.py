@@ -71,8 +71,8 @@ def get_res(i):
     return buy_thres(i, v = False)
    
 def get_all_res():
-    result = np.load('files/opt_stopping.npy')
+    result = np.load(header + 'files/opt_stopping.npy')
     ids = tqdm(range(np.argmin(result[:, 1] != 0), len(pos)))
     for id in ids:
         result[id, :] = np.array(buy_thres(id, thres=-1))
-        np.save('files/opt_stopping.npy', result)
+        np.save(header + 'files/opt_stopping.npy', result)

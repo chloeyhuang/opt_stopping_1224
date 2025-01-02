@@ -47,8 +47,8 @@ def get_all_res_baseline():
     
     return result
 
-res_baseline = np.load('files/baseline_score_filtered.npy')
-df_res_baseline_all = pd.DataFrame(data = np.load('files/baseline_score_filtered.npy'), columns =  ['bought', 'sold', 'net', 'vol', 'stopping time'])
+res_baseline = np.load(header + 'files/baseline_score_filtered.npy')
+df_res_baseline_all = pd.DataFrame(data = np.load(header + 'files/baseline_score_filtered.npy'), columns =  ['bought', 'sold', 'net', 'vol', 'stopping time'])
 
 df_res_baseline = df_res_baseline_all[df_res_baseline_all['vol'] != -1].reset_index()
 df_res_baseline['% change'] = -df_res_baseline['net']/df_res_baseline['bought'] * 100
@@ -69,7 +69,7 @@ baseline_unit_change = df_res_baseline['net'] / df_res_baseline['vol']
 sharpe_baseline = np.mean(baseline_unit_change)/np.std(baseline_unit_change)
 
 #   opt stopping 
-df_res_all = pd.DataFrame(data = np.load('files/opt_stopping.npy'), columns = ['bought', 'sold', 'net', 'vol', 'stopping time'])
+df_res_all = pd.DataFrame(data = np.load(header + 'files/opt_stopping.npy'), columns = ['bought', 'sold', 'net', 'vol', 'stopping time'])
 
 df_res = df_res_all[df_res_all['vol'] != -1].reset_index()
 df_res['% change'] = -df_res['net']/df_res['bought'] * 100
