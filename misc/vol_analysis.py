@@ -1,4 +1,4 @@
-from analysis import *
+from utils.analysis import *
 import optuna
 
 #   stuff for vol modelling
@@ -26,7 +26,7 @@ def vol_ratio(id):
 
     return vol_after/vol_before
 
-def est_vol(id, n):
+def est_vol_from_post_data(id, n):
     data = get_returns(td[id])
     pos_ind = to_df(pos[id]).index
     start = pos_ind[0]
@@ -47,12 +47,14 @@ def post_vol(id):
     data = get_returns(td[id])
     pos_d = to_df(pos[id]).index
     return np.std(data[pos_d[-1]:][:6000])
+
 #vr = pd.Series(data = [vol_ratio(id) for id in tqdm(range(523))])
 vr = np.load('files/vr.npy')
 pv = np.load('files/pv.npy')
 ev = np.load('files/ev.npy')
 shortm = np.load('files/shortmom.npy')
 
+#   optuna hyperparameter training for correlation
 def objective(trial):
     x = 1/(1000 * pv)
     y = -shortm/10

@@ -1,8 +1,5 @@
 from util_funcs import * 
 
-max_len_id = 'case_4430_depth_trade.csv'
-max_prop_id = 'case_2510_depth_trade.csv'
-
 def momentum(id, time = 0, weight = 200, fixed_vol = False):
     trade_data = to_df(td[id])
     pos_data = to_df(pos[id])
@@ -105,6 +102,7 @@ def score(id, log = False, plot = False, show_all = False):
         df = pd.DataFrame(data = np.array([wghted_score, mean_vol, volatility, short_mom, long_mom, unwghted_short_mom, unwghted_long_mom]).reshape(1, 7), columns = ['{0}score'.format("log " if log == True else ""), 'mean volume', '{0}volatility'.format("log " if log == True else ""), 'short mom', 'long mom', 'short unweighted mom', 'long unweighted mom'], index = [td[id][5:-16]])
         
         return df
+
 def fast_mmtm(id, weight = 200, start = False):
     trade_data = to_df(td[id])
     pos_data = to_df(pos[id])

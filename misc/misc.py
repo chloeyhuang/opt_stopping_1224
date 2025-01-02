@@ -1,4 +1,4 @@
-from util_funcs import * 
+from utils.util_funcs import * 
 
 def bid_ask_spread(td_fname):
     td = to_df(td_fname)

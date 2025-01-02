@@ -64,7 +64,9 @@ loss_given_l_baseline =  np.mean(df_res_baseline[df_res_baseline['net'] < 0]['ne
 pnl_ratio_baseline =  -earnings_given_w_baseline/loss_given_l_baseline
 
 general_pnl_baseline = pnl_ratio_baseline * winrate_baseline + loserate_baseline
-sharpe_baseline = np.mean(df_res_baseline['net'])/np.std(df_res_baseline['% change'])
+
+baseline_unit_change = df_res_baseline['net'] / df_res_baseline['vol']
+sharpe_baseline = np.mean(baseline_unit_change)/np.std(baseline_unit_change)
 
 #   opt stopping 
 df_res_all = pd.DataFrame(data = np.load('files/opt_stopping.npy'), columns = ['bought', 'sold', 'net', 'vol', 'stopping time'])
@@ -83,4 +85,6 @@ loss_given_l =  np.mean(df_res[df_res['net'] < 0]['net'])
 pnl_ratio =  -earnings_given_w/loss_given_l
 general_pnl = pnl_ratio * winrate + loserate
 
-sharpe = np.mean(df_res['net'])/np.std(df_res['% change'])
+unit_change = df_res['net']/df_res['vol']
+
+sharpe = np.mean(unit_change)/np.std(unit_change)

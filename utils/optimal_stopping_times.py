@@ -76,6 +76,7 @@ def get_opt_stopping_time(id, N, M, depth, k, interval = 1, emp=True, v= False):
     #opt_stopping_time = dt * np.argmin(mean_sig_dist_cumsum < k)
     return np.mean(opt_stopping_times)
 
+#   note that this one hasn't been updated
 #   using AdamW: N = 600, interval = 10(1s), k = 5, depth 2 
 def get_opt_stopping_time_from_real(id, N, depth, k, interval = 1, v= False):
     partial_sigs, payoffs = gen_partial_sigs_real_data(id, N, depth, interval = interval)
@@ -87,7 +88,6 @@ def get_opt_stopping_time_from_real(id, N, depth, k, interval = 1, v= False):
         l_opts.append(l_opt)
         #print(loss)
         #print(l_opt)
-        #print('-')
 
         #   performs inner product and squares it 
         in_prod = np.apply_along_axis(lambda x: np.inner(l_opt, x), -1, partial_sigs)
@@ -140,6 +140,7 @@ def get_opt_stopping_time_batched(id, time, N, M, depth, k, interval = 1, emp=Tr
     st_nz = stop_times[st_nz]
 
     losses_min = np.argsort(losses_nz)[:max(batches[1], 2)]
+
     if v == True:
         print(stop_times.reshape(batches)) 
         print(losses.reshape(batches))

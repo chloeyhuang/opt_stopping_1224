@@ -1,5 +1,5 @@
-from optimal_stopping_times import * 
-from pytorch_opt import * 
+from utils.optimal_stopping_times import * 
+from utils.pytorch_opt import * 
 import optuna
 
 #   hyperparameter tuning

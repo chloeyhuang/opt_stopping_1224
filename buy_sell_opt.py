@@ -1,5 +1,5 @@
-from analysis import *
-from optimal_stopping_times import get_opt_stopping_time_batched
+from ost import * 
+
 from multiprocess import Pool
 
 def graph_opt_sell(id, interval, N = 600):
@@ -72,7 +72,7 @@ def get_res(i):
    
 def get_all_res():
     result = np.load('files/opt_stopping.npy')
-    ids = tqdm(range(np.argmin(result[:, 1] != 0), 523))
+    ids = tqdm(range(np.argmin(result[:, 1] != 0), len(pos)))
     for id in ids:
-        result[id, :] = np.array(buy_thres(id))
+        result[id, :] = np.array(buy_thres(id, thres=-1))
         np.save('files/opt_stopping.npy', result)
