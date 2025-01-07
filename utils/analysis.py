@@ -27,10 +27,8 @@ def momentum(id, time = 0, weight = 200, fixed_vol = False):
     #   where weighting exponentially decays; small weight = closer values weighted more
     return np.sum(gradient * vols * np.exp(-10 * np.abs(np.trim_zeros(tdiff)/weight)))/norm_const
 
-def score(id, log = False, plot = False, show_all = False):
-    trade_data = to_df(td[id])
-    pos_data = to_df(pos[id])
-    returns = get_returns(td[id])
+def score(id, trade_data, pos_data, log = False, plot = False, show_all = False):
+    returns = get_returns(trade_data)
 
     def mmtm(time, weight, fixed_vol = False):
         select = trade_data[:time]['ask_p1'] 
@@ -103,10 +101,7 @@ def score(id, log = False, plot = False, show_all = False):
         
         return df
 
-def fast_mmtm(id, weight = 200, start = False):
-    trade_data = to_df(td[id])
-    pos_data = to_df(pos[id])
-
+def fast_mmtm(trade_data, pos_data, weight = 200, start = False):
     #   normalises weighted mean correctly
     norm_const = weight/10 *(1-np.exp(-1000/weight))
 
@@ -125,9 +120,9 @@ def fast_mmtm(id, weight = 200, start = False):
     if start == True:
         return score(pos_data.index[0])
     else:
-        return pd.Series(data = [score(t) for t in pos_data.index],     index = pos_data.index)
+        return pd.Series(data = [score(t) for t in pos_data.index], index = pos_data.index)
 
-all_scores = pd.read_csv('files/scored_cases.csv')
+all_scores = pd.read_csv(header + 'files/scored_cases.csv')
 corr = np.corrcoef(all_scores['score'], all_scores['mean volume'])
 #   correlation between them is approx -0.4, pretty sufficiently negatively correlated between score and mean vol
 
@@ -202,10 +197,10 @@ def vol_ratio_linreg(pre_vol, short_mom):
 
     return 0.7604 + 20.534 * eq
 
-def est_vol_ratio(id):
-    data = get_returns(td[id])
-    start = to_df(pos[id]).index[0] 
+def est_vol_ratio(trade_data, pos_data):
+    data = get_returns(trade_data)
+    start = pos_data.index[0] 
     pre_vol = np.std(data[:start][-6000:])
-    short_mom = fast_mmtm(id, start = True)
+    short_mom = fast_mmtm(trade_data, pos_data, start = True)
 
     return vol_ratio_linreg(pre_vol, short_mom)

@@ -1,19 +1,5 @@
 from utils.analysis import *
 
-#   stuff for vol modelling
-scaling = lambda x: np.abs(np.tanh((x-1)))
-vol_metrics = pd.read_csv(header + 'files/vol_metrics.csv')
-
-mle_all = pd.read_csv(header + 'files/mle_OU_ests.csv')
-mle_an = pd.read_csv(header + 'files/mle_OU_stats.csv')
-
-"""
-#   this is just how the metrics were produced; I get this is technically using future data but assuming this is the training set I can then try on more data
-lm_vol = sp.stats.linregress(vol_metrics['vol index'], mle_an['r_sigma'])
-vol_index_regressed = lm_vol.intercept + lm_vol.slope * vol_index
-
-vol_index_r_adjusted =(1-scaling(buy_vol_ratio)) * vol_index_regressed + scaling(buy_vol_ratio) * buy_vol_ratio
-"""
 #   normal OU process with normal dW
 def OU_process(dt, X0, N, theta, mu, sigma):
     X = np.zeros(N)
@@ -114,17 +100,12 @@ def gen_cdf(X, dt, bs_num = 0, stepsize = 0.01, v = False):
     t = np.arange(-5, 5, stepsize)
     return t, smoothed_emp_cdf(t), theta, sigma
 
-def gen_OU_sample(id, time, log = True, N = 6000, M = 1, emp = True, interval = 1):
-    data = get_rolling(id, log = log, interval=interval)['diff'].dropna()
-    pos_data = to_df(pos[id])
-    #start = pos_data.index[int((len(pos_data.index)/2))]
+def gen_OU_sample(trade_data, pos_data, time, log = False, N = 6000, M = 1, emp = True, interval = 1):
+    data = get_rolling(trade_data, log = log, interval=interval)['diff'].dropna()
     train = data[:time]
     dt = 0.1 * interval
 
-    #vol_ratio = mle_an['r_sigma'][id]
-    pred_vol_ratio = est_vol_ratio(id)
-    #if v== True:
-        #print('vol ratio: ', np.round(vol_ratio, decimals=4), ' | ', 'pred vol ratio: ', np.round(pred_vol_ratio, decimals=4))
+    pred_vol_ratio = est_vol_ratio(trade_data, pos_data)
     
     cdf_ran, cdf, theta, sigma = gen_cdf(train.values, dt, bs_num=0)
     paths = np.zeros((M, N))

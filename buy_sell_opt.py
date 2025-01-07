@@ -1,19 +1,17 @@
 from ost import * 
 
-from multiprocess import Pool
-
 def graph_opt_sell(id, interval, N = 600):
     pos_data = to_df(pos[id])
     td_data = to_df(td[id])
     start = pos_data.index[int((len(pos_data.index)/2))]
-    opt_stop = get_opt_stopping_time_batched(id, start, N, 50, 2, 10, interval=interval, batches=[10, 2])
-    end = start + timedelta(seconds= 0.1 * int(interval * opt_stop))
+    opt_stop = get_opt_stopping_time_batched(td_data, pos_data, start, N, 50, 2, 1, interval=interval, batches=[15, 2])
+    ends = [start + timedelta(seconds= 0.1 * int(interval * st)) for st in opt_stop]
     print(opt_stop)
 
     fig, ax = plt.subplots()
     ax.set(xmargin = 0, title = maketitle(td[id], td_data), xlabel = "timestamp")
     ax.plot([start], td_data["ask_p1"].at_time(start) * (0.9987), marker = "^", color = "red", markersize = '4', alpha = 0.8)
-    ax.plot([end], td_data["bid_p1"].at_time(end) * (1.0013), marker = "v", color = "green", markersize = '4', alpha = 0.8)
+    ax.plot(ends, td_data["bid_p1"].loc[ends] * (1.0013), marker = "v", color = "green", markersize = '4', alpha = 0.8)
     ax.plot(td_data.index, td_data["bid_p1"])
     print(td_data["ask_p1"].at_time(end).values - td_data["bid_p1"].at_time(start).values)
     
@@ -31,48 +29,75 @@ def score_plot(id, weight = 2000):
     ax1.plot(long, c='b')
     ax1.axhline(-4.5, c = 'black')
 
-def buy_thres(id, thres = -3, interval = 20, N = 600, v = False, p = False):
-    ret = get_returns(td[id])
-    score = fast_mmtm(id, weight = 2000) / (10**4 * np.std(ret))**2
+#   now takes 3 buy times 
+def buy_thres(trade_data, pos_data, thres = -3, interval = 20, N = 600, v = False, p = False, batches=[12, 3]):
+    unscaled_score = fast_mmtm(trade_data, pos_data, weight = 2000)
+    sc = get_returns(trade_data)[:unscaled_score.index[0]]
+    score = unscaled_score/ (10**4 * np.std(sc))**2
     buy_pos = score[score <= thres]
-    trade_data = to_df(td[id])
+    buy_pos_len = len(buy_pos)
 
     if len(buy_pos) == 0:
         print('no times in pos that are below threshold. no trades performed')
-        return -np.ones(5)
+        return -np.ones(4 + batches[1])
+
+    stopping_times = get_opt_stopping_time_batched(trade_data, pos_data, buy_pos.index[-1], N, 50, 2, 1, v = v, interval=interval, batches=batches)
+
+    sell_pos_indexes = [buy_pos.index + pd.Timedelta(buy_pos.index[-1] - buy_pos.index[0]) + pd.Timedelta(timedelta(seconds = int(0.1 * interval * st))) for st in stopping_times]
+
+    n_batches = len(stopping_times)
     
-    stopping_time = get_opt_stopping_time_batched(id, buy_pos.index[0], N, 50, 2, 10, v = v, interval=interval, batches=[10, 2])
+    buy = np.zeros((buy_pos_len, 2))
+    sell = np.zeros((buy_pos_len * n_batches, 2))
+    vol = lambda x: int(min(7000, 100 * abs(x)))
 
-    sell_pos_ind = buy_pos.index + timedelta(seconds=0.1 * interval * int(stopping_time))
+    for i in range(buy_pos_len):
+        buy_vol = vol(buy_pos[i]) * n_batches
+        sell_vol = vol(buy_pos[i])
 
-    buy = np.zeros((len(buy_pos), 2))
-    sell = np.zeros((len(buy_pos), 2))
+        buy[i, :] = [fulfill_order(trade_data, buy_pos.index[i], buy_vol, -1), buy_vol]
 
-    for i in range(len(buy_pos)):
-        buy[i, :] = [fulfill_order(trade_data, buy_pos.index[i], int(100 * abs(buy_pos[i])), -1), int(100 * abs(buy_pos[i]))]
-        sell[i, :] = [fulfill_order(trade_data, buy_pos.index[i] + timedelta(seconds=0.1 * interval * int(stopping_time)), int(100 * abs(buy_pos[i])), 1), int(100 * abs(buy_pos[i]))]
-
+        for j in range(n_batches):
+            sell[i + buy_pos_len * j, :] = [fulfill_order(trade_data, buy_pos.index[i] + pd.Timedelta(buy_pos.index[-1] - buy_pos.index[0]) + timedelta(seconds=0.1 * interval * int(stopping_times[j])),sell_vol, 1), sell_vol]
+    
     df_buy = pd.DataFrame(data = buy, index = buy_pos.index, columns = ['change', 'vol'])
-    df_sell = pd.DataFrame(data = sell, index = sell_pos_ind, columns = ['change', 'vol'])
+    df_sell = pd.concat([(pd.DataFrame(data = sell[i * buy_pos_len: (i+1) * buy_pos_len], index = sell_pos_indexes[i], columns = ['change', 'vol'])) for i in range(n_batches)])
+    
     if p == True:
-        plt.plot(trade_data['bid_p1'])
-        plt.plot(df_buy.index, np.mean(trade_data['bid_p1']) * np.ones(len(buy_pos)), marker = '^', c = 'r',alpha = 0.2)
-        plt.plot(df_sell.index, np.mean(trade_data['bid_p1']) * np.ones(len(buy_pos)), marker = 'v', c = 'g', alpha = 0.2)
+        fig, ax = plt.subplots()
+        start = df_buy.index[0] - timedelta(minutes=30)
+        end = df_sell.index[0] + timedelta(minutes=30)
+        ax.plot(trade_data['bid_p1'][start:end])
+        ax.scatter(df_buy.index, 0.999 * trade_data['ask_p1'].loc[df_buy.index], marker = '^', c = 'r',alpha = 0.2)
+        ax.scatter(df_sell.index, 1.001 * trade_data['bid_p1'].loc[df_sell.index], marker = 'v', c = 'g', alpha = 0.2)
+        ax.set(xmargin = 0)
     
     if v == True:
-        print(stopping_time)
+        print(stopping_times)
         print(np.sum(sell[:, 0]) + np.sum(buy[:, 0]) )
         return pd.concat((df_buy, df_sell))
     else:
-        return np.array([np.sum(buy[:, 0]), np.sum(sell[:, 0]), np.sum(sell[:, 0]) + np.sum(buy[:, 0]), np.sum(buy[:, 1]), stopping_time])
+        return np.hstack(([np.sum(buy[:, 0]), np.sum(sell[:, 0]), np.sum(sell[:, 0]) + np.sum(buy[:, 0]), np.sum(buy[:, 1])], stopping_times))
 
-def get_res(i):
-    print(i)
-    return buy_thres(i, v = False)
-   
-def get_all_res():
-    result = np.load(header + 'files/opt_stopping.npy')
+def get_all_res(fname):
+    file = header + 'files/{0}.npy'.format(fname)
+    result = np.load(file) if os.path.isfile(file) else np.zeros((len(td), 7))
     ids = tqdm(range(np.argmin(result[:, 1] != 0), len(pos)))
+
     for id in ids:
-        result[id, :] = np.array(buy_thres(id, thres=-1))
-        np.save(header + 'files/opt_stopping.npy', result)
+        t = to_df(td[id])
+        p = to_df(pos[id])
+        result[id, :] = np.array(buy_thres(t, p, thres=-1, N = 450))
+        np.save(file, result)
+
+def bt(id, interval):
+    t = to_df(td[id])
+    p = to_df(pos[id])
+
+    return buy_thres(t, p, interval=interval, p = True)
+
+def st(id, interval, N = 600):
+    t = to_df(td[id])
+    p = to_df(pos[id])
+    
+    stopping_time = get_opt_stopping_time_batched(t, p, p.index[0], N, 50, 2, 1, v = True, interval=interval, batches=[15, 2])

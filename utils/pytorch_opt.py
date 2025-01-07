@@ -29,8 +29,8 @@ class Model(nn.Module):
         return -(losses.diag()).mean()
 
 #   adam optimisation
-def adam_opt(ps, pf, k, epochs = 1000, lr = 0.01, sc = 0.035949, v = False):
-    l0 = np.random.normal(size = ps.shape[2], scale = sc * k)
+def adam_opt(ps, pf, k, epochs = 1000, lr = 0.01, sc = 0.005, v = False):
+    l0 = np.random.normal(size = ps.shape[2], scale = sc)
     model = Model(l0, ps, pf, k)
     if v == True:
         print('initial loss:', float(model.forward()))
@@ -60,5 +60,5 @@ def adam_opt(ps, pf, k, epochs = 1000, lr = 0.01, sc = 0.035949, v = False):
         ax.plot(np.arange(epochs), loss_hist)
         ax.set(xmargin = 0)
 
-    return param_hist[-1, :], float((loss_hist[-1]))
+    return param_hist[np.argmin(loss_hist), :], float(np.min(loss_hist))
     #return param_hist[np.argmin(loss_hist), :], float(np.min(loss_hist))

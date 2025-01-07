@@ -1,5 +1,7 @@
 from utils.OU import * 
 
+mle_an = pd.read_csv('files/mle_OU_stats.csv')
+
 #   some plotting functions and diagnostic plots
 def plot_OU(dt, X0, N, theta, mu, sigma):
     Y = OU_process(dt, X0, N, theta, mu, sigma)
@@ -18,10 +20,11 @@ def plot_OU(dt, X0, N, theta, mu, sigma):
     ax.axhline(y = mu, c = 'g')
     ax.set(title = r"$\mu = {0}, \theta = {1}, \sigma = {2}$".format(mu, theta, sigma), xlabel = "time", ylabel = 'X(t)', xmargin = 0)
 
-def plot_OU_est(dt, X0, start, N, theta, mu, sigma, id):
-    data = get_rolling(id)['diff'].dropna()
+def plot_OU_est(start, N, theta, mu, sigma, id, interval):
+    trade_data = to_df(td[id])
+    data = get_rolling(trade_data, interval=interval)['diff'].dropna()
     X0 = data[start]
-    Y = OU_process(dt, X0, N, theta, mu, sigma)
+    Y = OU_process(0.1 * interval, X0, N, theta, mu, sigma)
     # Plot the result
     fig, ax = plt.subplots()
     ax.plot(data.index, data, label = 'original')
@@ -30,23 +33,23 @@ def plot_OU_est(dt, X0, start, N, theta, mu, sigma, id):
     ax.legend()
 
 def OU_est(id, log = True, bs_num = 0, r_corrected = True, interval = 1):    
-    data = get_rolling(id, log = log, interval = interval)['diff'].dropna()
-    start = to_df(pos[id]).index[0]
+    trade_data = to_df(td[id])
+    data = get_rolling(trade_data, log = log, interval = interval)['diff'].dropna()
+    pos_data = to_df(pos[id])
+    start = pos_data.index[0]
 
     pre_train = data[:start]
-    N = len(data) - len(pre_train) + 1
-    dt = 0.1 * interval
+    pred_index = data[start:].reindex(pd.date_range(start = start - timedelta(milliseconds=100*interval),end = data.index[-1], freq='{0}00ms'.format(interval))).index
 
-    vol_ratio = mle_an['r_sigma'][id]
-    pred_vol_ratio = vol_metrics['r_sigma pred.'][id]
+    N = len(pred_index)
+    dt = 0.1 * interval
+    vol_ratio = mle_an['r_vol'][id]
+    pred_vol_ratio = est_vol_ratio(trade_data, pos_data)
     print('vol ratio: ', np.round(vol_ratio, decimals=4), ' | ', 'pred vol ratio: ', np.round(pred_vol_ratio, decimals=4))
     
     cdf_ran, cdf, theta, sigma = gen_cdf(pre_train.values, dt, bs_num=bs_num)
     pred = OU_process_mod(dt, pre_train[-1], N, theta, 0, sigma, cdf_ran, cdf)
-    pred_ratio_corrected = OU_process_mod(dt, pre_train[-1], N, theta, 0, pred_vol_ratio * sigma, cdf_ran, cdf)
-    pred_index = data[start:].index
-    if len(pred) != len(pred_index):
-        pred_index = data[start:].reindex(pd.date_range(start = start - timedelta(milliseconds=100*interval),end = pred_index[-1], freq='{0}00ms'.format(interval))).index
+    pred_ratio_corrected = OU_process_mod(dt, pre_train[-1], N, theta, 0, pred_vol_ratio * sigma, cdf_ran, cdf)    
 
     fig, ax = plt.subplots()
     ax.plot(data.index, data, label = 'true')
@@ -91,8 +94,9 @@ def OU_diff(id, plot = True, est_mu = False, log=False):
         return pd.DataFrame(data=vals, columns = cols, index = [caseid])
 
 #   checks estimated goodness of fit of empirical vs histogram
-def gof(id, v = False, alpha = 0.05, bs_num = 1, log = True, bins = 800, y_upper = 1.0, x_ran = 5, filter = False):
-    data = get_rolling(id, log = log)['diff'].dropna()
+def gof(id, v = False, alpha = 0.05, bs_num = 1, log = True, bins = 800, y_upper = 1.0, x_ran = 5, filter = False, interval = 1):
+    trade_data = to_df(td[id])
+    data = get_rolling(trade_data, log = log, interval=interval)['diff'].dropna()
     start = pos_drop_zero(to_df(pos[id])).index[0]
 
     X = data[:start].values

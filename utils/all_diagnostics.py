@@ -5,7 +5,7 @@ from utils.optimal_stopping_times import *
 
 from misc.OU_diagnostics import * 
 from misc.hyperparameter_tuning import *
-from pytorch_opt import * 
+from utils.pytorch_opt import * 
 from misc.misc import * 
 
 print('all funcs initialised')

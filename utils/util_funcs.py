@@ -1,5 +1,6 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+import utils.settings as settings
 
 import math
 import numpy as np 
@@ -18,9 +19,11 @@ from statsmodels.graphics.tsaplots import plot_acf, acf
 import os
 from tqdm import tqdm
 
-import utils.settings as settings
 header = settings.header
 train_header = settings.train_header
+train_suffix = settings.train_suffix
+train_4h_suffix = settings.train_4h_suffix
+tdiff = settings.tdiff
 
 #   formatting for matplotlib graphs & pandas tables
 plt.rcParams['text.usetex'] = True
@@ -33,8 +36,8 @@ plt.rcParams["figure.figsize"] = (12, 4)
 plt.rcParams["legend.loc"] = 'lower right'
 pd.options.display.float_format = '{:,.5f}'.format
 
-files = np.array(os.listdir(train_header + 'train'))
-files_long = np.array(os.listdir(train_header + 'train_4h'))
+files = np.array(os.listdir(train_header + train_suffix))
+files_long = np.array(os.listdir(train_header + train_4h_suffix))
 
 pos = files[np.nonzero(np.char.endswith(files, 'pos.csv'))]
 td = files[np.nonzero(np.char.endswith(files, 'trade.csv'))]
@@ -46,11 +49,11 @@ getnametd = lambda x: int(x[7:-16]) if x[0] == "l" else int(x[5:-16])
 pos = sorted(pos, key = getname)
 td = sorted(td, key = getnametd)
 
-#pos_l = files_long[np.nonzero(np.char.endswith(files_long, 'pos.csv'))]
-#td_l = files_long[np.nonzero(np.char.endswith(files_long, 'trade.csv'))]
+pos_l = files_long[np.nonzero(np.char.endswith(files_long, 'pos.csv'))]
+td_l = files_long[np.nonzero(np.char.endswith(files_long, 'trade.csv'))]
 
-#pos_l = sorted(pos_l, key = getname)
-#td_l = sorted(td_l, key = getnametd)
+pos_l = sorted(pos_l, key = getname)
+td_l = sorted(td_l, key = getnametd)
 
 #   a bunch of util functions and variable definitions to help visualise data 
 bid_prices = np.char.add("bid_p", (1 + np.arange(10)).astype(str))
@@ -65,7 +68,7 @@ def pos_drop_zero(pos:pd.DataFrame):
     return no_na[no_na['mid_p'] != 0]
 
 def to_df(filename:str): 
-    folder = train_header + 'train_4h/' if filename[0] == 'l' else train_header + 'train/'
+    folder = train_header + train_4h_suffix if filename[0] == 'l' else train_header + train_suffix
     df = pd.read_csv(folder + filename, parse_dates = ["timestamp"], index_col = 0, date_format = 'mixed')
     if filename[-7:-4] == 'pos':
         return pos_drop_zero(df)
@@ -73,7 +76,7 @@ def to_df(filename:str):
         return df
 
 def to_df_no_ts(filename:str): 
-    folder = train_header + 'train_4h/' if filename[0] == 'l' else train_header + 'train/'
+    folder = train_header + train_4h_suffix if filename[0] == 'l' else train_header + train_suffix
     return pd.read_csv(folder + filename, parse_dates = ["timestamp"], date_format = 'mixed')
 
 #   matches the times where trading occurs with the times specified in pos data; just for easy access (potentially not useful? )
@@ -188,31 +191,26 @@ def graph_price(pos_fname, td_fname, ret_fig = False):
         return fig
 
 #   gets the returns 
-def get_returns(td_fname, start= 0):
-    td = to_df(td_fname)
-    tp = td.index
-    t = pd.Timestamp(start)
+def get_returns(trade_data):
+    tp = trade_data.index
+    t = tp[0]
     ln = len(tp)
 
-    if start == 0:
-        t = tp[0]
+    bid_price = trade_data['bid_p1'][t:]
+    ask_price = trade_data['ask_p1'][t]
 
-    bid_price = td['bid_p1'][t:]
-    ask_price = td['ask_p1'][t]
-
-    scaled_bid = (bid_price/ask_price)[:ln]
-    tp = scaled_bid.index[:ln]
+    scaled_bid = (bid_price/ask_price)
 
     returns = np.zeros(len(scaled_bid))
     returns[0] = scaled_bid.iloc[0]-1
     returns[1:] = np.array(scaled_bid[1:])/np.array(scaled_bid[:-1]) - 1
 
-    return pd.Series(data=returns, index = tp)
+    return pd.Series(data=returns, index = scaled_bid.index)
 
 #   returns price - price.rolling(n).mean()
-def get_rolling(id, n=500, start = 0, log = False, drop_zero = False, interval = 1):
-    trade_data = to_df(td[id])[::interval]
-    bid_price = trade_data['bid_p1'][start:]
+def get_rolling(trade_data, n=500, start = 0, log = False, drop_zero = False, interval = 1):
+    data = trade_data[::interval]
+    bid_price = data['bid_p1'][start:]
 
     if drop_zero == True:
         tick_price_diff = bid_price.values[1:] - bid_price.values[:-1]
@@ -229,8 +227,9 @@ def get_rolling(id, n=500, start = 0, log = False, drop_zero = False, interval =
 
 #   graphs price - price.rolling(n).mean
 def plot_rolling(id, start = 0, interval = 1, n = 500):
-    data = get_rolling(id, n, interval=interval)[start:]
+    trade_data = to_df(td[id])
     pos_data = to_df(pos[id])
+    data = get_rolling(trade_data, n, interval=interval)[start:]
 
     fig, ax = plt.subplots()
     ax.plot(data.index, data['diff'], label = 'price difference')
