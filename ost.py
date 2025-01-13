@@ -1,4 +1,5 @@
-PATH = '/Users/huangc/Documents/GitHub/opt_stopping_1224/'
+PATH = '/home/leewind/mnt/opt_stopping_1224/'
+
 import os
 os.chdir(PATH)
 

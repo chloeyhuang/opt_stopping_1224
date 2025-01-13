@@ -49,7 +49,7 @@ def buy_thres(trade_data, pos_data, thres = -3, interval = 20, N = 600, v = Fals
     
     buy = np.zeros((buy_pos_len, 2))
     sell = np.zeros((buy_pos_len * n_batches, 2))
-    vol = lambda x: int(min(7000, 100 * abs(x)))
+    vol = lambda x: int(min(4000, 100 * abs(x)))
 
     for i in range(buy_pos_len):
         buy_vol = vol(buy_pos[i]) * n_batches
@@ -87,8 +87,13 @@ def get_all_res(fname):
     for id in ids:
         t = to_df(td[id])
         p = to_df(pos[id])
-        result[id, :] = np.array(buy_thres(t, p, thres=-1, N = 450))
-        np.save(file, result)
+        try:
+            result[id, :] = np.array(buy_thres(t, p, thres=-1, N = 450))
+            np.save(file, result)
+        except:
+            print('error occured: id num = {0}'.format(id))
+            result[id, :] = -np.ones(7)
+            np.save(file, result)
 
 def bt(id, interval):
     t = to_df(td[id])
@@ -101,3 +106,5 @@ def st(id, interval, N = 600):
     p = to_df(pos[id])
     
     stopping_time = get_opt_stopping_time_batched(t, p, p.index[0], N, 50, 2, 1, v = True, interval=interval, batches=[15, 2])
+
+#get_all_res('opt_stopping_thres_l')

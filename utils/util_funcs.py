@@ -26,7 +26,7 @@ train_4h_suffix = settings.train_4h_suffix
 tdiff = settings.tdiff
 
 #   formatting for matplotlib graphs & pandas tables
-plt.rcParams['text.usetex'] = True
+plt.rcParams['text.usetex'] = settings.latex
 plt.rcParams['figure.dpi'] = 200
 mpl.rcParams['lines.linewidth'] = 1
 mpl.rcParams['axes.titlepad'] = 12
@@ -67,16 +67,16 @@ def pos_drop_zero(pos:pd.DataFrame):
     no_na = pos.dropna()
     return no_na[no_na['mid_p'] != 0]
 
-def to_df(filename:str): 
-    folder = train_header + train_4h_suffix if filename[0] == 'l' else train_header + train_suffix
+def to_df(filename:str, l = False): 
+    folder = train_header + train_4h_suffix if l == True else train_header + train_suffix
     df = pd.read_csv(folder + filename, parse_dates = ["timestamp"], index_col = 0, date_format = 'mixed')
     if filename[-7:-4] == 'pos':
         return pos_drop_zero(df)
     else:
         return df
 
-def to_df_no_ts(filename:str): 
-    folder = train_header + train_4h_suffix if filename[0] == 'l' else train_header + train_suffix
+def to_df_no_ts(filename:str, l = False): 
+    folder = train_header + train_4h_suffix if l == True else train_header + train_suffix
     return pd.read_csv(folder + filename, parse_dates = ["timestamp"], date_format = 'mixed')
 
 #   matches the times where trading occurs with the times specified in pos data; just for easy access (potentially not useful? )

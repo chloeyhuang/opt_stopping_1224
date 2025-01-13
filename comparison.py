@@ -69,7 +69,7 @@ baseline_unit_change = df_res_baseline['net'] / df_res_baseline['vol']
 sharpe_baseline = np.mean(baseline_unit_change)/np.std(baseline_unit_change)
 
 #   opt stopping 
-df_res_all = pd.DataFrame(data = np.load(header + 'files/opt_stopping.npy'), columns = ['bought', 'sold', 'net', 'vol', 'stopping time'])
+df_res_all = pd.DataFrame(data = np.load(header + 'files/opt_stopping_thres_new.npy'), columns = ['bought', 'sold', 'net', 'vol', 'st1', 'st2', 'st3'])
 
 df_res = df_res_all[df_res_all['vol'] != -1].reset_index()
 df_res['% change'] = -df_res['net']/df_res['bought'] * 100
@@ -85,6 +85,6 @@ loss_given_l =  np.mean(df_res[df_res['net'] < 0]['net'])
 pnl_ratio =  -earnings_given_w/loss_given_l
 general_pnl = pnl_ratio * winrate + loserate
 
-unit_change = df_res['net']/df_res['vol']
+unit_change = -df_res['net']/df_res['bought']
 
 sharpe = np.mean(unit_change)/np.std(unit_change)
