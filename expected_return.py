@@ -48,7 +48,7 @@ def expected_return_thres(id, thres = -3, M = 10, tdiff = 600, v = False, interv
 
         net = np.mean(sell_prices.values - ask_prices.values.reshape(len(sell_prices.values), 1), axis = 1) * np.abs(1000 * buy_pos.values)
         print(np.mean(net))
-        #return pd.Series(data =net ,index = buy_pos.index)
+        return pd.Series(data =net ,index = buy_pos.index)
     else:
         net = np.mean(sell_prices.values - ask_prices.values.reshape(len(sell_prices.values), 1), axis = 1) * np.abs(1000 * buy_pos.values)
 

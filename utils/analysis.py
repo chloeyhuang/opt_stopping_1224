@@ -101,22 +101,31 @@ def score(id, trade_data, pos_data, log = False, plot = False, show_all = False)
         
         return df
 
-def fast_mmtm(trade_data, pos_data, weight = 200, start = False):
+def fast_mmtm(trade_data, pos_data, weight = 200, start = False, vol_scale = False):
     #   normalises weighted mean correctly
     norm_const = weight/10 *(1-np.exp(-1000/weight))
+    vol_scaled = (trade_data['ask_v1']/trade_data['ask_v1'][0]).apply(lambda t: max(2, t))
 
     def score(t):
-        select = trade_data[:t]['ask_p1']
+        select = trade_data[t-pd.Timedelta(minutes=18):t]
+        asks = select['ask_p1']
         times = select.index
-        diff = trade_data['ask_p1'][t] - select
+        diff = trade_data['ask_p1'][t] - asks
         tdiff = (times - t).to_numpy(dtype = 'float64')
             
         #   normalises time diff to be between 0 and 100 
         tdiff = -tdiff/tdiff[0]* 100
         gradient = (-diff/tdiff).dropna()
+
+        if vol_scale == True:
+            vol = vol_scaled[t-pd.Timedelta(minutes=18):t].iloc[:-1]
+        else:
+            vol = np.ones(len(gradient))
+
          #   returns momentum as sum of gradient * volume at time t * weighting
         #   where weighting exponentially decays; small weight = closer values weighted more
-        return 10000 * np.sum(gradient * np.exp(-10 * np.abs(np.trim_zeros(tdiff)/weight)))/norm_const
+        return 10000 * np.sum(gradient * vol * np.exp(-10 * np.abs(np.trim_zeros(tdiff)/weight)))/norm_const
+    
     if start == True:
         return score(pos_data.index[0])
     else:

@@ -1,6 +1,6 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-import utils.settings as settings
+import settings as settings
 
 import math
 import numpy as np 
@@ -112,15 +112,10 @@ def get_returns(trade_data):
     return pd.Series(data=returns, index = scaled_bid.index)
 
 #   returns price - price.rolling(n).mean()
-def get_rolling(trade_data, n=500, start = 0, log = False, drop_zero = False, interval = 1):
+def get_rolling(trade_data, n = 500, log = False, interval = 1):
     data = trade_data[::interval]
-    bid_price = data['bid_p1'][start:]
-
-    if drop_zero == True:
-        tick_price_diff = bid_price.values[1:] - bid_price.values[:-1]
-        drop = np.flatnonzero(tick_price_diff == 0)
-        bid_price = bid_price[drop]
-    
+    bid_price = data['bid_p1']
+        
     if log == True:
         bid_price = np.log(bid_price)
 

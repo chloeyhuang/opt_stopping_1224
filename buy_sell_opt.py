@@ -108,3 +108,62 @@ def st(id, interval, N = 600):
     stopping_time = get_opt_stopping_time_batched(t, p, p.index[0], N, 50, 2, 1, v = True, interval=interval, batches=[15, 2])
 
 #get_all_res('opt_stopping_thres_l')
+
+def get_sell_times(volume, ref_time, freq):
+    ref_time = pd.Timestamp(ref_time)
+    window = min(50, int(volume/7000))
+    sell_times = pd.date_range(ref_time - window * pd.Timedelta(freq), ref_time + window * pd.Timedelta(freq), freq = freq, inclusive = 'right')
+
+    length = len(sell_times)
+    vol = volume/length
+    return pd.Series(data = vol *np.ones(length), index = sell_times)
+
+#   now takes 3 buy times 
+def buy_thres_fixed(trade_data, pos_data, thres = -3, interval = 20, N = 600, v = False, p = False, batches=[12, 3]):
+    unscaled_score = fast_mmtm(trade_data, pos_data, weight = 2000)
+    sc = get_returns(trade_data)[:unscaled_score.index[0]]
+    score = unscaled_score/ (10**4 * np.std(sc))**2
+    buy_pos = score[score <= thres]
+    buy_pos_len = len(buy_pos)
+
+    if len(buy_pos) == 0:
+        print('no times in pos that are below threshold. no trades performed')
+        return -np.ones(4 + batches[1])
+
+    stopping_times = np.round(get_opt_stopping_time_batched(trade_data, pos_data, buy_pos.index[-1], N, 50, 2, 1, v = v, interval=interval, batches=batches), decimals = 1)
+    n_batches = len(stopping_times)
+    
+    buy = np.zeros((buy_pos_len, 2))
+    vol = lambda x: int(min(4000, 100 * abs(x)))
+
+    for i in range(buy_pos_len):
+        buy_vol = vol(buy_pos[i]) * n_batches
+        buy[i, :] = [fulfill_order(trade_data, buy_pos.index[i], buy_vol, -1), buy_vol]
+
+    total_vol = np.sum(buy[:, 1])
+    ref_times = buy_pos.index[-1] + stopping_times * interval * pd.Timedelta(milliseconds=100)
+    sell_times = pd.concat([get_sell_times(total_vol/n_batches, rt, '0.5s') for rt in ref_times])
+    n_sell = len(sell_times)
+    sell = np.zeros((n_sell, 2))
+
+    for i in range(n_sell):
+        sell[i, :] = [fulfill_order(trade_data, sell_times.index[i], sell_times.iloc[i], 1), sell_times.iloc[i]]
+
+    df_buy = pd.DataFrame(data = buy, index = buy_pos.index, columns = ['change', 'vol'])
+    df_sell = pd.DataFrame(data = sell, index = sell_times.index, columns = ['change', 'vol'])
+    
+    if p == True:
+        fig, ax = plt.subplots()
+        start = df_buy.index[0] - timedelta(minutes=30)
+        end = df_sell.index[0] + timedelta(minutes=30)
+        ax.plot(trade_data['bid_p1'][start:end])
+        ax.scatter(df_buy.index, 0.999 * trade_data['ask_p1'].loc[df_buy.index], marker = '^', c = 'r',alpha = 0.2)
+        ax.scatter(df_sell.index, 1.001 * trade_data['bid_p1'].loc[df_sell.index], marker = 'v', c = 'g', alpha = 0.2)
+        ax.set(xmargin = 0)
+    
+    if v == True:
+        print(stopping_times)
+        print(np.sum(sell[:, 0]) + np.sum(buy[:, 0]) )
+        return pd.concat((df_buy, df_sell))
+    else:
+        return np.hstack(([np.sum(buy[:, 0]), np.sum(sell[:, 0]), np.sum(sell[:, 0]) + np.sum(buy[:, 0]), np.sum(buy[:, 1])], stopping_times * interval/10))
