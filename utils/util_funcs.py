@@ -19,6 +19,9 @@ from statsmodels.graphics.tsaplots import plot_acf, acf
 import os
 from tqdm import tqdm
 
+from pandarallel import pandarallel
+pandarallel.initialize(progress_bar=False, nb_workers=10)
+
 header = settings.header
 train_header = settings.train_header
 train_suffix = settings.train_suffix

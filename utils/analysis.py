@@ -1,5 +1,6 @@
 from utils.util_funcs import * 
 
+
 def momentum(id, time = 0, weight = 200, fixed_vol = False):
     trade_data = to_df(td[id])
     pos_data = to_df(pos[id])
@@ -129,7 +130,8 @@ def fast_mmtm(trade_data, pos_data, weight = 200, start = False, vol_scale = Fal
     if start == True:
         return score(pos_data.index[0])
     else:
-        return pd.Series(data = [score(t) for t in pos_data.index], index = pos_data.index)
+        scores = pos_data.index.to_series().parallel_apply(score)
+        return pd.Series(data = scores, index = pos_data.index)
 
 all_scores = pd.read_csv(header + 'files/scored_cases.csv')
 corr = np.corrcoef(all_scores['score'], all_scores['mean volume'])

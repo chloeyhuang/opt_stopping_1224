@@ -60,7 +60,7 @@ class trade:
             if self.entry_timer < self.entry_lim:
                 self.entry_timer += 1
                 return [0, 0]
-            elif self.entry_timer == self.entry_lim and self.entry_time == 0:
+            elif self.entry_timer == self.entry_lim and self.buy_start_time == 0:
                 self.buy_start_time = self.time
                 self.open = True
                 return [1, abs(score)]

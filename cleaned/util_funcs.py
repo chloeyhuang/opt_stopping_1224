@@ -19,6 +19,9 @@ from statsmodels.graphics.tsaplots import plot_acf, acf
 import os
 from tqdm import tqdm
 
+from pandarallel import pandarallel
+pandarallel.initialize(progress_bar=False, nb_workers=10)
+
 header = settings.header
 train_header = settings.train_header
 train_suffix = settings.train_suffix
@@ -142,7 +145,8 @@ def fast_mmtm(trade_data, pos_data, time = None, weight = 200):
         #   where weighting exponentially decays; small weight = closer values weighted more
         return 10000 * np.sum(gradient * np.exp(-10 * np.abs(np.trim_zeros(tdiff)/weight)))/norm_const
     if time == None:
-        return pd.Series(data = [score(t) for t in pos_data.index], index = pos_data.index)
+        scores = pos_data.index.to_series().parallel_apply(score)
+        return pd.Series(data = scores, index = pos_data.index)
     else:
         return score(time)
 
